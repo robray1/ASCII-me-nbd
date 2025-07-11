@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Art Converter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: none; width: 100%; padding: 0; }
+        h1 { text-align: center; margin-bottom: 32px; font-size: 2.25rem; font-weight: 700; color: #0f172a; }
+        .upload-area { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 40px; text-align: center; background: rgba(255,255,255,0.8); margin: 0 auto 40px; max-width: 600px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .upload-area:hover { border-color: #3b82f6; background: rgba(239,246,255,0.9); transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,0.15); }
+        .upload-area h3 { margin-bottom: 12px; color: #374151; font-size: 1.25rem; font-weight: 600; }
+        .upload-area p { color: #6b7280; margin-bottom: 24px; }
+        .file-input { display: none; }
+        .upload-btn, .resize-btn, .download-btn { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .upload-btn:hover, .resize-btn:hover, .download-btn:hover { background: #2563eb; transform: translateY(-1px); }
+        .controls { display: flex; gap: 24px; margin: 0 auto 40px; padding: 24px; background: rgba(255,255,255,0.8); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex-wrap: wrap; justify-content: center; max-width: 800px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group label { font-weight: 500; color: #374151; font-size: 0.875rem; }
+        .control-group input, .control-group select { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white; }
+        .control-group input:focus, .control-group select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .charset-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .charset-checkbox { display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .charset-checkbox:hover { background: #e2e8f0; }
+        .charset-checkbox input { margin: 0; accent-color: #3b82f6; }
+        .charset-checkbox label { margin: 0; font-size: 0.875rem; cursor: pointer; color: #374151; }
+        .color-group { display: flex; align-items: center; gap: 8px; }
+        .color-picker { width: 40px; height: 32px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; }
+        .ascii-output { background: #000; color: #fff; padding: 20px; border-radius: 10px; font-family: 'Courier New', monospace; font-size: 8px; line-height: 1; overflow: auto; white-space: pre; border: 2px solid #333; position: relative; min-width: 300px; min-height: 200px; width: 800px; height: 400px; margin: 0 auto 20px; }
+        .ascii-text { width: 100%; height: 100%; display: block; }
+        .resize-controls { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 4px; background: rgba(0,0,0,0.7); padding: 4px; border-radius: 6px; opacity: 0.8; }
+        .resize-controls:hover { opacity: 1; }
+        .resize-btn { padding: 6px 10px; font-size: 11px; }
+        .download-section { text-align: center; margin: 20px auto 0; padding: 24px; background: rgba(255,255,255,0.8); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); max-width: 400px; }
+        .download-btn { background: #10b981; margin: 0 6px; }
+        .download-btn:hover { background: #059669; }
+        .loading { text-align: center; padding: 40px; color: #6b7280; }
+        .error { color: #dc2626; text-align: center; padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .controls { flex-direction: column; } .ascii-output { font-size: 6px; width: calc(100vw - 40px); max-width: 100%; height: 300px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ASCII Art Converter</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <h3>Drop your image here</h3>
+            <p>or click to select a file</p>
+            <button class="upload-btn" id="uploadBtn">Choose Image</button>
+            <input type="file" class="file-input" id="fileInput" accept="image/*">
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="width">Width:</label>
+                <input type="number" id="width" value="150" min="20" max="500">
+            </div>
+            <div class="control-group">
+                <label for="animation">Animation:</label>
+                <select id="animation">
+                    <option value="none">None</option>
+                    <option value="glow">Glow</option>
+                    <option value="matrix">Matrix</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Character Sets:</label>
+                <div class="charset-checkboxes">
+                    <div class="charset-checkbox"><input type="checkbox" id="cs1" value="standard" checked><label for="cs1">Standard</label></div>
+                    <div class="charset-checkbox"><input type="checkbox" id="cs2" value="detailed"><label for="cs2">Detailed</label></div>
+                    <div class="charset-checkbox"><input type="checkbox" id="cs3" value="blocks"><label for="cs3">Blocks</label></div>
+                    <div class="charset-checkbox"><input type="checkbox" id="cs4" value="dots"><label for="cs4">Dots</label></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Colors:</label>
+                <div class="color-group">
+                    <input type="color" class="color-picker" id="textColor" value="#ffffff" title="Text">
+                    <input type="color" class="color-picker" id="bgColor" value="#000000" title="Background">
+                </div>
+            </div>
+        </div>
+
+        <div id="output"></div>
+        <div id="originalPreview" style="display:none;text-align:center;margin-bottom:20px;"><img id="originalImage" style="max-width:100%;max-height:300px;border-radius:8px;"></div>
+        <div id="downloadSection" style="display:none;" class="download-section">
+            <button class="download-btn" id="downloadTxt">Download .txt</button>
+            <button class="download-btn" id="downloadHtml">Download .html</button>
+            <button class="download-btn" id="downloadGif">Download .gif</button>
+        </div>
+    </div>
+
+    <script>
+        class ASCIIConverter {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.currentImage = null;
+                this.currentASCII = '';
+                this.charSets = {
+                    standard: '@#S%?*+;:,.',
+                    detailed: '@%#*+=-:. ',
+                    blocks: '██▓▒░  ',
+                    dots: '●○◐◑◒◓◔◕'
+                };
+                this.init();
+            }
+
+            init() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                
+                fileInput.addEventListener('change', e => e.target.files[0] && this.processImage(e.target.files[0]));
+                document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
+                
+                uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = '#3b82f6'; });
+                uploadArea.addEventListener('dragleave', () => uploadArea.style.borderColor = '#cbd5e1');
+                uploadArea.addEventListener('drop', e => {
+                    e.preventDefault();
+                    uploadArea.style.borderColor = '#cbd5e1';
+                    if (e.dataTransfer.files[0]) this.processImage(e.dataTransfer.files[0]);
+                });
+
+                document.getElementById('width').addEventListener('change', () => this.currentImage && this.convert());
+                document.getElementById('animation').addEventListener('change', () => this.updateAnimation());
+                document.querySelectorAll('.charset-checkbox input').forEach(cb => cb.addEventListener('change', () => this.currentImage && this.convert()));
+                document.getElementById('textColor').addEventListener('change', () => this.updateColors());
+                document.getElementById('bgColor').addEventListener('change', () => this.updateColors());
+                document.getElementById('downloadTxt').addEventListener('click', () => this.download('txt'));
+                document.getElementById('downloadHtml').addEventListener('click', () => this.download('html'));
+                document.getElementById('downloadGif').addEventListener('click', () => this.downloadGif());
+                
+                window.asciiConverter = this;
+            }
+
+            processImage(file) {
+                if (!file.type.startsWith('image/')) return this.showError('Please select an image file.');
+                this.showLoading();
+                
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.currentImage = img;
+                        document.getElementById('originalImage').src = img.src;
+                        document.getElementById('originalPreview').style.display = 'block';
+                        this.convert();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            convert() {
+                const width = parseInt(document.getElementById('width').value);
+                const selectedSets = Array.from(document.querySelectorAll('.charset-checkbox input:checked')).map(cb => cb.value);
+                if (selectedSets.length === 0) selectedSets.push('standard');
+                
+                let chars = [...new Set(selectedSets.map(set => this.charSets[set]).join(''))].join('');
+                const aspectRatio = this.currentImage.height / this.currentImage.width;
+                const height = Math.floor(width * aspectRatio * 0.5);
+
+                this.canvas.width = width;
+                this.canvas.height = height;
+                this.ctx.drawImage(this.currentImage, 0, 0, width, height);
+                
+                const imageData = this.ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                let ascii = '';
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const offset = (y * width + x) * 4;
+                        const brightness = (data[offset] + data[offset + 1] + data[offset + 2]) / 3;
+                        const charIndex = Math.floor((brightness / 255) * (chars.length - 1));
+                        ascii += chars[chars.length - 1 - charIndex];
+                    }
+                    ascii += '\n';
+                }
+
+                this.currentASCII = ascii;
+                this.display(ascii);
+            }
+
+            display(ascii) {
+                const output = document.getElementById('output');
+                const existing = document.getElementById('asciiOutput');
+                
+                if (existing) {
+                    const textEl = existing.querySelector('.ascii-text');
+                    if (textEl) textEl.textContent = ascii;
+                } else {
+                    output.innerHTML = `<div class="ascii-output" id="asciiOutput">
+                        <div class="ascii-text" id="asciiText">${ascii}</div>
+                        <div class="resize-controls">
+                            <button class="resize-btn" onclick="asciiConverter.resize('smaller')">- &lt;&gt;</button>
+                            <button class="resize-btn" onclick="asciiConverter.resize('larger')">+ &lt;&gt;</button>
+                            <button class="resize-btn" onclick="asciiConverter.resize('wider')">+↔</button>
+                            <button class="resize-btn" onclick="asciiConverter.resize('taller')">+^</button>
+                        </div>
+                    </div>`;
+                    document.getElementById('downloadSection').style.display = 'block';
+                }
+                
+                this.updateAnimation();
+                this.updateColors();
+            }
+
+            resize(action) {
+                const el = document.getElementById('asciiOutput');
+                if (!el) return;
+                
+                const w = parseInt(el.style.width) || 800;
+                const h = parseInt(el.style.height) || 400;
+                const chars = parseInt(document.getElementById('width').value) || 150;
+                
+                let newW = w, newH = h, newChars = chars;
+                
+                const maxW = window.innerWidth * 4;
+                const maxH = window.innerHeight * 4;
+                
+                switch(action) {
+                    case 'larger': newW = Math.min(w + 150, maxW); newH = Math.min(h + 100, maxH); newChars = Math.min(chars + 25, 500); break;
+                    case 'smaller': newW = Math.max(w - 150, 300); newH = Math.max(h - 100, 200); newChars = Math.max(chars - 25, 30); break;
+                    case 'wider': newW = Math.min(w + 200, maxW); newChars = Math.min(chars + 30, 500); break;
+                    case 'taller': newH = Math.min(h + 150, maxH); break;
+                }
+                
+                el.style.width = newW + 'px';
+                el.style.height = newH + 'px';
+                
+                if (newChars !== chars) {
+                    document.getElementById('width').value = newChars;
+                    setTimeout(() => this.convert(), 50);
+                }
+            }
+
+            updateAnimation() {
+                const textEl = document.getElementById('asciiText');
+                const anim = document.getElementById('animation').value;
+                if (textEl) {
+                    textEl.style.animation = '';
+                    if (anim === 'glow') textEl.style.animation = 'glow 2s ease-in-out infinite alternate';
+                    if (anim === 'matrix') textEl.style.animation = 'matrix 3s linear infinite';
+                }
+            }
+
+            updateColors() {
+                const el = document.getElementById('asciiOutput');
+                if (el) {
+                    el.style.color = document.getElementById('textColor').value;
+                    el.style.backgroundColor = document.getElementById('bgColor').value;
+                }
+            }
+
+            download(format) {
+                if (!this.currentASCII) return alert('No ASCII art to download.');
+                
+                const filename = `ascii-art-${Date.now()}.${format}`;
+                let content = this.currentASCII;
+                
+                if (format === 'html') {
+                    const textColor = document.getElementById('textColor').value;
+                    const bgColor = document.getElementById('bgColor').value;
+                    const anim = document.getElementById('animation').value;
+                    
+                    content = `<!DOCTYPE html><html><head><title>ASCII Art</title><style>
+body{background:${bgColor};color:${textColor};font-family:'Courier New',monospace;font-size:8px;line-height:1;margin:20px;white-space:pre}
+.ascii-art{${anim === 'glow' ? 'animation:glow 2s ease-in-out infinite alternate' : anim === 'matrix' ? 'animation:matrix 3s linear infinite' : ''}}
+@keyframes glow{0%{text-shadow:0 0 8px ${textColor}}100%{text-shadow:0 0 20px ${textColor}}}
+@keyframes matrix{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+</style></head><body><div class="ascii-art">${this.currentASCII}</div></body></html>`;
+                }
+                
+                const blob = new Blob([content], { type: format === 'html' ? 'text/html' : 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            showLoading() {
+                document.getElementById('output').innerHTML = '<div class="loading">Converting...</div>';
+            }
+
+            showError(msg) {
+                document.getElementById('output').innerHTML = `<div class="error">${msg}</div>`;
+            }
+
+            async downloadGif() {
+                if (!this.currentASCII) return alert('No ASCII art to download.');
+                
+                const textColor = document.getElementById('textColor').value;
+                const bgColor = document.getElementById('bgColor').value;
+                const anim = document.getElementById('animation').value;
+                
+                if (anim === 'none') {
+                    alert('Please select an animation to create a .gif');
+                    return;
+                }
+                
+                // Create animated HTML that behaves like a GIF
+                const animatedHtml = `<!DOCTYPE html><html><head><title>ASCII Art Animation</title><style>
+body{background:${bgColor};color:${textColor};font-family:'Courier New',monospace;font-size:8px;line-height:1;margin:0;padding:20px;white-space:pre;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.ascii-art{${anim === 'glow' ? 'animation:glow 2s ease-in-out infinite alternate' : anim === 'matrix' ? 'animation:matrix 3s linear infinite' : ''}}
+@keyframes glow{0%{text-shadow:0 0 8px ${textColor};filter:brightness(1)}100%{text-shadow:0 0 20px ${textColor},0 0 35px ${textColor};filter:brightness(1.2)}}
+@keyframes matrix{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+</style></head><body><div class="ascii-art">${this.currentASCII}</div></body></html>`;
+                
+                // Download as HTML file (acts like an animated GIF when opened)
+                const blob = new Blob([animatedHtml], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ascii-art-animated-${Date.now()}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                // Show info about the download
+                setTimeout(() => {
+                    alert('Downloaded as animated HTML! Open the file in a browser to see the animation loop like a GIF.');
+                }, 100);
+            }
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes glow { 0% { text-shadow: 0 0 8px currentColor; } 100% { text-shadow: 0 0 20px currentColor; } }
+            @keyframes matrix { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        `;
+        document.head.appendChild(style);
+
+        document.addEventListener('DOMContentLoaded', () => new ASCIIConverter());
+    </script>
+</body>
+</html>
